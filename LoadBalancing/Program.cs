@@ -4,9 +4,7 @@ namespace LoadBalancing
 {
     internal class Program
     {
-        private static void Main(string[] args)
-        {
-            BenchmarkRunner.Run<LbComparison>();
-        }
+        private static void Main(string[] args) 
+            => BenchmarkRunner.Run<LbComparison>();
     }
 }

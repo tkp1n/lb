@@ -1,15 +1,21 @@
 using System;
-using System.Threading;
 
 namespace LoadBalancing
 {
     internal static class ThreadStaticRandomLoadBalancer
     {
-        private static readonly ThreadLocal<Random> Random = new ThreadLocal<Random>(() => new Random());
+        [ThreadStatic] private static Random Random;
 
         public static Connection Select(Connection[] connections)
         {
-            var index = Random.Value.Next(0, connections.Length);
+            var r = Random;
+            if (r == null)
+            {
+                r = new Random();
+                Random = r;
+            }
+            
+            var index = r.Next(0, connections.Length);
             return connections[index];
         }
     }
