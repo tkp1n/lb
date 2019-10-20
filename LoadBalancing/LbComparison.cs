@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using BenchmarkDotNet.Attributes;
 using JitBuddy;
 
@@ -8,16 +9,14 @@ namespace LoadBalancing
     public class LbComparison
     {
         private Connection[] _connections;
-        private LinkedListBalancer _linkedListBalancer;
-
         private ModuloLoadBalancer _moduloLoadBalancer;
-
-        [Params(8)] public int NofConnections { get; set; }
+        private LinkedListBalancer _linkedListBalancer;
 
         [GlobalSetup]
         public void Setup()
         {
-            _connections = new Connection[NofConnections];
+            const int nofConnections = 8;
+            _connections = new Connection[nofConnections];
             for (var i = 0; i < _connections.Length; i++)
             {
                 _connections[i] = new Connection(i);
@@ -30,8 +29,13 @@ namespace LoadBalancing
         [GlobalCleanup]
         public void Print()
         {
-            var random = typeof(RandomLoadBalancer)
-                .GetMethod(nameof(RandomLoadBalancer.Select), BindingFlags.Static | BindingFlags.Public)
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return;
+            
+            var threadStaticRandom = typeof(ThreadStaticRandomLoadBalancer)
+                .GetMethod(nameof(ThreadStaticRandomLoadBalancer.Select), BindingFlags.Static | BindingFlags.Public)
+                .ToAsm();
+            var syncRandom = typeof(SyncRandomLoadBalancer)
+                .GetMethod(nameof(SyncRandomLoadBalancer.Select), BindingFlags.Static | BindingFlags.Public)
                 .ToAsm();
             var modulo = typeof(ModuloLoadBalancer)
                 .GetMethod(nameof(ModuloLoadBalancer.Select), BindingFlags.Instance | BindingFlags.Public)
@@ -40,8 +44,10 @@ namespace LoadBalancing
                 .GetMethod(nameof(LinkedListBalancer.Select), BindingFlags.Instance | BindingFlags.Public)
                 .ToAsm();
 
-            Console.Out.WriteLine("RANDOM");
-            Console.Out.WriteLine(random);
+            Console.Out.WriteLine("THREAD STATIC RANDOM");
+            Console.Out.WriteLine(threadStaticRandom);
+            Console.Out.WriteLine("SYNC RANDOM");
+            Console.Out.WriteLine(syncRandom);
             Console.Out.WriteLine("MODULO");
             Console.Out.WriteLine(modulo);
             Console.Out.WriteLine("LINKED LIST");
@@ -49,8 +55,12 @@ namespace LoadBalancing
         }
 
         [Benchmark(Baseline = true)]
-        public Connection Random()
-            => RandomLoadBalancer.Select(_connections);
+        public Connection ThreadStaticRandom()
+            => ThreadStaticRandomLoadBalancer.Select(_connections);
+
+        [Benchmark]
+        public Connection SyncRandom()
+            => SyncRandomLoadBalancer.Select(_connections);
 
         [Benchmark]
         public Connection Modulo()

@@ -1,19 +1,13 @@
-using System;
 using System.Threading;
 
 namespace LoadBalancing
 {
-    public class LinkedListBalancer
+    internal class LinkedListBalancer
     {
         private Node _node;
 
-        public LinkedListBalancer(Connection[] connections)
-        {
-            var copy = new Connection[connections.Length];
-            Array.Copy(connections, copy, connections.Length);
-            FisherYates.Shuffle(copy);
-            _node = BuildList(copy);
-        }
+        public LinkedListBalancer(Connection[] connections) 
+            => _node = BuildList(connections.Copy().Shuffle());
 
         public Connection Select()
         {
@@ -44,10 +38,7 @@ namespace LoadBalancing
 
         private class Node
         {
-            public Node(Connection current)
-            {
-                Current = current;
-            }
+            public Node(Connection current) => Current = current;
 
             public Connection Current { get; }
             public Node Next { get; set; }
